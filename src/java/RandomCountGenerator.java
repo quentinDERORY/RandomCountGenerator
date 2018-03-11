@@ -4,13 +4,30 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class RandomCountGenerator {
+
     private Random r = new Random();
+    public LinkedBlockingQueue<Map.Entry<Integer,Date>> queue;
     private LinkedList<Integer> hist = new LinkedList<Integer>();
     private final static int HISTORY_LENGTH=100;
 
+    public RandomCountGenerator(LinkedBlockingQueue<Map.Entry<Integer,Date>> queue){
+        this.queue = queue;
+    }
+    public static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+        } catch(NumberFormatException e) {
+            return false;
+        } catch(NullPointerException e) {
+            return false;
+        }
+        // only got here if we didn't return false
+        return true;
+    }
 
     public HashMap frequencyMap(){
         HashMap result = new HashMap<Integer,Float>();
@@ -19,7 +36,7 @@ public class RandomCountGenerator {
         float three = 0;
         float four = 0;
         float five = 0;
-        for(Integer i : hist){
+        for( Integer i : hist){
             switch(i){
                 case 1:
                     one++;
@@ -49,56 +66,63 @@ public class RandomCountGenerator {
         return result;
     }
     public int randomInt(){
+        Calendar calendar = Calendar.getInstance();
         if(hist.size()==HISTORY_LENGTH)
             hist.remove();
         int rand = r.nextInt(100);
         if(rand<50){
+            queue.add(new AbstractMap.SimpleEntry<>(1,calendar.getTime()));
             hist.add(1);
             System.out.println("1");
             return 1;
         }else if(rand<75){
-            hist.add(2);
+            queue.add(new AbstractMap.SimpleEntry<>(2,calendar.getTime()));
             System.out.println("2");
+            hist.add(2);
             return 2;
         }else if (rand<90){
-            hist.add(3);
+            queue.add(new AbstractMap.SimpleEntry<>(3,calendar.getTime()));
             System.out.println("3");
+            hist.add(3);
             return 3;
         }else if(rand<95){
-            hist.add(4);
+            queue.add(new AbstractMap.SimpleEntry<>(4,calendar.getTime()));
             System.out.println("4");
+            hist.add(4);
             return 4;
         }else{
-            hist.add(5);
+            queue.add(new AbstractMap.SimpleEntry<>(5,calendar.getTime()));
             System.out.println("5");
+            hist.add(5);
             return 5;
         }
 
     }
-    public void writeLastNumberToDisk() throws IOException {
-        int last = hist.getLast();
-        BufferedWriter fw = new BufferedWriter(new FileWriter("LastNumberGenerated",true));
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/YYYY  hh:mm:ss");
-        Calendar calendar = Calendar.getInstance();
-        fw.write("Last Number Generated " + last + " and writed at " + dateFormat.format(calendar.getTime()) + "\n" );
-        fw.close();
-    }
+
 
     public static void main(String[] args){
-        RandomCountGenerator rd = new RandomCountGenerator();
-        for(int i=0;i<100;i++)
-            rd.randomInt();
-
-        System.out.println("Frequency:");
-        HashMap<Integer,Float> map = rd.frequencyMap();
-        for(Integer key : map.keySet()){
-            System.out.println("key:" + key.toString() + " frequency:" + map.get(key).toString());
+        String outputFile = "LastNumberGenerated.txt";
+        if(args!=null && args.length>1 && args[1]!=""){
+            outputFile = args[1];
         }
-
+        int loopNumber = 100;
+        if(args.length > 2 && args[2]!="" && isInteger(args[2])){
+            loopNumber = Integer.parseInt(args[2]);
+        }
+        WriterThread writerThread = null;
         try {
-            rd.writeLastNumberToDisk();
-        }catch(IOException e){
-            System.out.println(e);
+            writerThread = new WriterThread(outputFile);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        RandomCountGenerator rd = new RandomCountGenerator(WriterThread.queue);
+
+        writerThread.setRunning(true);
+        writerThread.start();
+        while(loopNumber>0){
+            rd.randomInt();
+            loopNumber--;
+        }
+        writerThread.setRunning(false);
     }
 }

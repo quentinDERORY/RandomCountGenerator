@@ -9,14 +9,18 @@ probability as follow:
  - 3 - 15%
  - 4 - 5%
  - 5 - 5%
+
+ 
 The method will save the last 100 numbers generated.
+It will send each generated number to a queue shared with the Writer Thread.
 
 ## frequencyMap():
 This function will return the frequency over the last 100 number generated
 for each number.
 
 
-## writeLastNumberToDisk():
+# WriterThread:
 
-Method that reads the most recently generated random number and the current time
-and writes them both to disk on one line.
+Thread polling from the number generated queue and log them in a file.
+
+
