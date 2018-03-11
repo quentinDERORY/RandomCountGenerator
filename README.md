@@ -10,7 +10,7 @@ probability as follow:
  - 4 - 5%
  - 5 - 5%
 
- 
+
 The method will save the last 100 numbers generated.
 It will send each generated number to a queue shared with the Writer Thread.
 
@@ -22,5 +22,9 @@ for each number.
 # WriterThread:
 
 Thread polling from the number generated queue and log them in a file.
+Make sure that logs are saved chronologically.
 
+# GeneratorThread
+
+Thread used to run the RandomCountGenerator
 

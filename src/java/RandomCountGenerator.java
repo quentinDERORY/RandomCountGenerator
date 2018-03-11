@@ -1,8 +1,5 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -14,9 +11,19 @@ public class RandomCountGenerator {
     private LinkedList<Integer> hist = new LinkedList<Integer>();
     private final static int HISTORY_LENGTH=100;
 
+    /**
+     *
+     * @param queue The queue where to put the generated integer with their timestamps
+     */
     public RandomCountGenerator(LinkedBlockingQueue<Map.Entry<Integer,Date>> queue){
         this.queue = queue;
     }
+
+    /**
+     *
+     * @param s
+     * @return is an integer
+     */
     public static boolean isInteger(String s) {
         try {
             Integer.parseInt(s);
@@ -29,6 +36,10 @@ public class RandomCountGenerator {
         return true;
     }
 
+    /**
+     * Compute the frequency over the last 100 numbers generated
+     * @return The different frequency of each generated numbers
+     */
     public HashMap frequencyMap(){
         HashMap result = new HashMap<Integer,Float>();
         float one = 0;
@@ -65,6 +76,11 @@ public class RandomCountGenerator {
         result.put(5,five/sizeList);
         return result;
     }
+
+    /**
+     * Generate an integer between one and five with a specific distribution probability
+     * @return the generated integer
+     */
     public int randomInt(){
         Calendar calendar = Calendar.getInstance();
         if(hist.size()==HISTORY_LENGTH)
@@ -101,28 +117,47 @@ public class RandomCountGenerator {
 
 
     public static void main(String[] args){
+
+        // Argument parsing
         String outputFile = "LastNumberGenerated.txt";
         if(args!=null && args.length>1 && args[1]!=""){
             outputFile = args[1];
         }
-        int loopNumber = 100;
+        int loopNumber = 100000;
         if(args.length > 2 && args[2]!="" && isInteger(args[2])){
             loopNumber = Integer.parseInt(args[2]);
         }
+        // Threads initialisation
+
         WriterThread writerThread = null;
         try {
             writerThread = new WriterThread(outputFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        RandomCountGenerator rd = new RandomCountGenerator(WriterThread.queue);
 
+        List<Thread> pool = new ArrayList<Thread>();
+
+        // Start of generator threads
+        for(int i=0;i<5;i++){
+            GeneratorThread t = new GeneratorThread(loopNumber,WriterThread.queue);
+            t.start();
+            t.setRunning(true);
+            pool.add(t);
+        }
+
+        // Start the writer thread
         writerThread.setRunning(true);
         writerThread.start();
-        while(loopNumber>0){
-            rd.randomInt();
-            loopNumber--;
-        }
+
+        // Join the main thread to generator threads to close the log file correctly
+        pool.forEach((Thread x)-> {
+            try {
+                x.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
         writerThread.setRunning(false);
     }
 }
